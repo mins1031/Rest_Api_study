@@ -29,5 +29,23 @@ public class Event {
     private boolean offline;
     private boolean free;
     @Enumerated(EnumType.STRING)
-    private EventStatus eventStatus;
+    private EventStatus eventStatus = EventStatus.DRAFT;
+
+    public void update() {
+        //UPdate free
+        if (this.basePrice == 0 && this.maxPrice == 0){
+            this.free = true;
+        } else
+            this.free = false;
+
+        if (this.location == null || this.location.isBlank()){
+            this.offline = false;
+        } else {
+            this.offline = true;
+        }
+    }
+    /**
+     * 이거 꿀팁 if (this.location.isBlank()){ 이 if 조건문의 경우 java 11 이전엔 trim으로 공백을 모두 지우고 .isEmpty를
+     * 확인했다면 java11부터는 isBlank를 통해 문자열을 공백을 제외하고 검사해줌.
+     */
 }

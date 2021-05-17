@@ -1,6 +1,8 @@
 package com.reststudy.demo.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reststudy.demo.common.TestDescription;
+import org.assertj.core.api.Assertions;
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -20,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -62,9 +65,9 @@ public class EventControllerTest {
      *  springboot에서 기본 제공되는 클래스인듯
      * */
     @Test
+    @TestDescription("정상적으로 이벤트를 생성하는 테스트")
     public void createEvent() throws Exception {
-        Event event = Event.builder()
-                .id(100)
+        EventDto event = EventDto.builder()
                 .name("Spring")
                 .description("REST API STUDY")
                 .beginEnrollmentDateTime(LocalDateTime.of(2018,11,23,14,21))
@@ -75,8 +78,6 @@ public class EventControllerTest {
                 .maxPrice(200)
                 .limitOfEnrollment(100)
                 .location("강남역")
-                .free(true)
-                .offline(false)
                 .build();
 
         //Mockito.when(eventRepository.save(event)).thenReturn(event);
@@ -91,12 +92,73 @@ public class EventControllerTest {
                 .andExpect(jsonPath("id").exists())
                 .andExpect(header().exists(HttpHeaders.LOCATION))
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaTypes.HAL_JSON_VALUE))
-                .andExpect(jsonPath("id").value(Matchers.not(100)))
-                .andExpect(jsonPath("free").value(Matchers.not(true)))
+                .andExpect(jsonPath("free").value(false))
+                .andExpect(jsonPath("offline").value(true))
+                .andExpect(jsonPath("eventStatus").value(EventStatus.DRAFT.name()))
                 ;
     }
 
     @Test
+    public void testFree(){
+        //Given
+        Event event = Event.builder()
+                .basePrice(0)
+                .maxPrice(0)
+                .build();
+        //When
+        event.update();
+
+        //Then
+        assertThat(event.isFree()).isTrue();
+
+        //Given
+        event = Event.builder()
+                .basePrice(100)
+                .maxPrice(0)
+                .build();
+        //When
+        event.update();
+
+        //Then
+        assertThat(event.isFree()).isFalse();
+
+        //Given
+        event = Event.builder()
+                .basePrice(0)
+                .maxPrice(100)
+                .build();
+        //When
+        event.update();
+
+        //Then
+        assertThat(event.isFree()).isFalse();
+
+    }
+
+    @Test
+    public void testOffice(){
+        //Given
+        Event event = Event.builder()
+                .location("강남역 네이버 D2 스타업 팩토리")
+                .build();
+        //When
+        event.update();
+
+        //Then
+        assertThat(event.isOffline()).isTrue();
+        //Given
+        event = Event.builder()
+                .build();
+        //When
+        event.update();
+
+        //Then
+        assertThat(event.isOffline()).isFalse();
+
+    }
+
+    @Test
+    @TestDescription("입력 받을수 없는 값을 사용한 경우 에러발생하는 테스트")
     public void createEvent_badRequest() throws Exception{
         Event event = Event.builder()
                 .id(100)
@@ -123,7 +185,9 @@ public class EventControllerTest {
         ;
     }
 
+    /** 요거는 값이 비어있는, 즉 @Valid에 걸리는 필드값이 비어있을때의 테스트*/
     @Test
+    @TestDescription("입력값이 비어있는경우 에러가 발생하는 테스트")
     public void createEvent_Bad_Request_Empty_Input() throws Exception{
         EventDto eventDto = EventDto.builder().build();
 
@@ -131,6 +195,40 @@ public class EventControllerTest {
                 .contentType(MediaType.APPLICATION_JSON_UTF8)
                 .content(this.objectMapper.writeValueAsString(eventDto)))
                 .andExpect(status().isBadRequest());
+
+    }
+
+    /**
+     * 요거는 값 자체가 이상한 값이 들어왔을때 ex) 시작하는 날이 끝나는 날보다 뒤일떄, 기본급이 최대급보다 클때 등등..
+     * */
+    @Test
+    @TestDescription("입력값이 잘못된 경우 에러를 발생하는 테스트")
+    public void createEvent_Bad_Request_Wrong_Input() throws Exception{
+        EventDto eventDto = EventDto.builder()
+                .name("Spring")
+                .description("REST API STUDY")
+                .beginEnrollmentDateTime(LocalDateTime.of(2018,11,26,14,21))
+                .closeEnrollmentDateTime(LocalDateTime.of(2018,11,25,14,21))
+                .beginEventDateTime(LocalDateTime.of(2018,11,24,14,21))
+                .endEventDateTime(LocalDateTime.of(2018,11,23,14,21))
+                .basePrice(10000)
+                .maxPrice(200)
+                .limitOfEnrollment(100)
+                .location("강남역")
+                .build();
+
+        this.mockMvc.perform(post("/api/events")
+                .contentType(MediaType.APPLICATION_JSON_UTF8)
+                .content(this.objectMapper.writeValueAsString(eventDto)))
+                .andDo(print())
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$[0].objectName").exists())
+                .andExpect(jsonPath("$[0].field").exists())
+                .andExpect(jsonPath("$[0].defaultMessage").exists())
+                .andExpect(jsonPath("$[0].code").exists())
+                .andExpect(jsonPath("$[0].rejectedValue").exists())
+
+        ;
 
     }
 }
