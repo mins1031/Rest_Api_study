@@ -17,14 +17,12 @@ import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.Errors;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -78,9 +76,59 @@ public class EventController {
 
     @GetMapping
     public ResponseEntity queryEvents(Pageable pageable,
-                                      PagedResourcesAssembler resourcesAssembler){
+                                      PagedResourcesAssembler<Event> resourcesAssembler){
         Page<Event> page = this.eventRepository.findAll(pageable);
-        var pageResources = resourcesAssembler.toModel(page);
-        return ResponseEntity.ok().body(pageResources);
+        var pageResources = resourcesAssembler.toModel(page, e -> new EventResource(e));
+        pageResources.add(new Link("/docs.index.html#resources-event-create").withRel("profile"));
+        return ResponseEntity.ok(pageResources);
+    }
+    /*페이지를 Resource로 바꿔서 링크를 보내줘야하는데 그럴때 유용한게 스프링 Data jpa가 제공하는
+    PagedResourcesAssembler임 PagedResourcesAssembler로 랩핑해 응답바디에 담아주면
+    페이지와 관련된 링크들도 담아줌 현재,다음,이전,마지막,처음페이지등의 링크 그러나 그냥 Page만
+    PagedResourcesAssembler로 변환하면 각각의 페이지 정보는 모르게됨. 그런경우
+    PagedResourcesAssembler에 파라미터를 2개 줌.*/
+
+    @GetMapping("/{id}")
+    public ResponseEntity getEvent(@PathVariable Integer id){
+        Optional<Event> optionalEvent = this.eventRepository.findById(id);
+        if (optionalEvent.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+
+        Event findEvent = optionalEvent.get();
+        EventResource eventResource = new EventResource(findEvent);
+        eventResource.add(
+                new Link("/docs.index.html#resources-event-create").withRel("profile"));
+        return ResponseEntity.ok(eventResource);
+        //왜바로 findEvent를 ok바디에 담지 않고 EventResource로 랩핑해 보내는가?
+        //=> self에 대한 링크를 만드는 리소스가 EventResource여서 매번 linkTo()...하는 코드
+        //작성보다 EventResource를 만들어놓고 사용하는게 코드중복 줄인 좋은코드.
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity updateEvent(@PathVariable Integer id,
+                                      @RequestBody @Valid EventDto eventDto,
+                                      Errors errors){
+        if (errors.hasErrors())
+            return ResponseEntity.badRequest().body(new ErrorsResource(errors));
+
+        eventValidator.validate(eventDto,errors);
+
+        if (errors.hasErrors())
+            return ResponseEntity.badRequest().body(new ErrorsResource(errors));
+
+        Optional<Event> optionalEvent = eventRepository.findById(id);
+        if (optionalEvent.isEmpty())
+            return ResponseEntity.notFound().build();
+
+        Event event = optionalEvent.get();
+        ModelMapper modelMapper = new ModelMapper();
+        event = modelMapper.map(eventDto,Event.class);
+
+        eventRepository.save(event);
+        EventResource eventResource = new EventResource(event);
+        eventResource.add(new Link("/docs.index.html#resources-event-create").withRel("profile"));
+        eventResource.add(linkTo(methodOn(EventController.class).getEvent(id)).withRel("get-an-event"));
+        return ResponseEntity.ok().body(event);
     }
 }
