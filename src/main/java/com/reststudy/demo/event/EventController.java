@@ -129,6 +129,6 @@ public class EventController {
         EventResource eventResource = new EventResource(event);
         eventResource.add(new Link("/docs.index.html#resources-event-create").withRel("profile"));
         eventResource.add(linkTo(methodOn(EventController.class).getEvent(id)).withRel("get-an-event"));
-        return ResponseEntity.ok().body(event);
+        return ResponseEntity.ok().body(eventResource);
     }
 }

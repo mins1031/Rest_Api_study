@@ -6,9 +6,9 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
-  thymeleaf:
-    prefix: classpath:/templates/
-    suffix: .html
+  #thymeleaf:
+    #prefix: classpath:/templates/
+    #suffix: .html
   jpa:
     hibernate:
       ddl-auto: create
@@ -18,5 +18,7 @@ spring:
         format_sql: true
 
 logging.level:
+  org.springframework.security: debug
   org.hibernate.SQL: debug
+
   # org.hibernate.type: trace

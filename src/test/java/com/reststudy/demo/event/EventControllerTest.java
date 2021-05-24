@@ -1,6 +1,7 @@
 package com.reststudy.demo.event;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reststudy.demo.common.BaseControllerTest;
 import com.reststudy.demo.common.RestDocsConfiguration;
 import com.reststudy.demo.common.TestDescription;
 import org.assertj.core.api.Assertions;
@@ -38,13 +39,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
 @RunWith(SpringRunner.class)
 //@WebMvcTest
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureRestDocs
 @Import(RestDocsConfiguration.class)
-/**
+
  * @WebMvcTest는 말 그대로 Mock == 가짜 객체를 사용하기 때문에 디비에 적용을 할수 없어 createEvent에서 만든
  * event값을 활용해서 뭔가 할수가 없음. 지금 주석을 작성하는 경우 event의 id값과 free,offline값의 적용을 안하는 과정을
  * 보여주기 위함이기에 @SpringBootTest,@AutoConfigureMockMvc 두개의 어노테이션을 사용한다고함. 뭔말이지;
@@ -52,14 +54,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 따로 설정안해도된다? 이런말인거 같은데 일단 감이 안옴. 암튼 더이상 테스트가 mocking되지 않기에 실제 리포지토리를 사용해 테스트가
  * 진행됨. 그래서 밑에서 작성한 Event객체의 id값,free,offline값은 실제 컨트롤러의 파라미터인 dto에 값이 없기에
  * 무시가 되고 리포지토리를 통해 테스트 실행후 성공하게됨.
- * */
-public class EventControllerTest {
-
-    @Autowired
-    MockMvc mockMvc;
-
-    @Autowired
-    ObjectMapper objectMapper;
+ * BaseControllerTest에 공통으로(자주쓰는)사용되늰 어노테이션들을 몰아넣어 사용해줌(코드중복방지)*/
+public class EventControllerTest extends BaseControllerTest {
 
     @Autowired
     EventRepository eventRepository;
@@ -242,6 +238,7 @@ public class EventControllerTest {
                 .location("강남역")
                 .free(true)
                 .offline(false)
+                .eventStatus(EventStatus.BEGAN_ENROLLMENT)
                 .build();
 
         mockMvc.perform(post("/api/events/")

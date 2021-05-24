@@ -1,5 +1,6 @@
 package com.reststudy.demo.event;
 
+import com.reststudy.demo.accounts.Account;
 import lombok.*;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +31,9 @@ public class Event {
     private boolean free;
     @Enumerated(EnumType.STRING)
     private EventStatus eventStatus = EventStatus.DRAFT;
+
+    @ManyToOne
+    private Account manager;
 
     public void update() {
         //UPdate free

@@ -20,5 +20,6 @@ spring:
         format_sql: true
 
 logging.level:
+  org.springframework.security: debug
   org.hibernate.SQL: debug
   org.hibernate.type: trace
